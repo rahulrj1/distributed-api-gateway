@@ -28,3 +28,24 @@ jobs:
       
       - name: Run tests
         run: pytest test_app.py -v
+
+  test-service-b:
+    name: Test Service B (Java)
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: services/service-b
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Run tests
+        run: mvn test -B

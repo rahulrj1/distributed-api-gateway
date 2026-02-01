@@ -1,11 +1,11 @@
 """
 Unit tests for Service A
 
-Run locally:
+Run locally (from services/service-a/):
     pytest test_app.py -v
 
-Run via Docker:
-    docker build -t service-a .
+Run via Docker (from project root):
+    docker build -t service-a ./services/service-a
     docker run --rm service-a pytest test_app.py -v
 """
 
