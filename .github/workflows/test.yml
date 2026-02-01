@@ -49,3 +49,25 @@ jobs:
       
       - name: Run tests
         run: mvn test -B
+
+  test-service-c:
+    name: Test Service C (Node.js)
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: services/service-c
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run tests
+        run: npm test
