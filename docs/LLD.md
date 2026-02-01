@@ -37,9 +37,16 @@ API_Gateway/
 │       └── Dockerfile
 │
 ├── prometheus/
+│   └── prometheus.yml
 │
 └── scripts/
-    └── generate_jwt.go
+    ├── generate_jwt.go
+    └── e2e/                    # End-to-end test scripts
+        ├── test_routing.sh
+        ├── test_auth.sh
+        ├── test_ratelimit.sh
+        ├── test_circuitbreaker.sh
+        └── run_all.sh
 ```
 
 ---
@@ -229,6 +236,15 @@ openssl rsa -in keys/private.pem -pubout -out keys/public.pem
 | After 30s cooldown | Half-open |
 | 2 successes in half-open | Closes |
 | Failure in half-open | Re-opens |
+
+### Cross-Instance Tests (Distributed Behavior)
+
+These tests prove the gateway works correctly with multiple instances sharing state:
+
+| Test | Setup | Expected |
+|------|-------|----------|
+| Rate limit shared | Send 6 req to :5000, 6 req to :5001 (limit=10) | 10 succeed, 2 get 429 |
+| Circuit state shared | Trigger 5 failures via :5000, request to :5001 | :5001 returns 503 instantly |
 
 ---
 
