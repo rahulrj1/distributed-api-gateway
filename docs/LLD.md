@@ -12,7 +12,7 @@ API_Gateway/
 │   ├── private.pem
 │   └── public.pem
 │
-├── gateway/
+├── gateway/                     # Go
 │   ├── main.go
 │   ├── go.mod
 │   ├── Dockerfile
@@ -21,14 +21,20 @@ API_Gateway/
 │   ├── middleware/
 │   ├── proxy/
 │   └── pkg/
-│       ├── jwt/
-│       ├── ratelimit/
-│       ├── circuitbreaker/
-│       └── errors/
 │
 ├── services/
-│   ├── service-a/
-│   └── service-b/
+│   ├── service-a/              # Python/Flask
+│   │   ├── app.py
+│   │   ├── requirements.txt
+│   │   └── Dockerfile
+│   ├── service-b/              # Java/Spring Boot
+│   │   ├── src/
+│   │   ├── pom.xml
+│   │   └── Dockerfile
+│   └── service-c/              # Node.js/Express
+│       ├── index.js
+│       ├── package.json
+│       └── Dockerfile
 │
 ├── prometheus/
 │
@@ -68,6 +74,11 @@ routes:
 
   - path_prefix: "/service-b"
     target: "http://service-b:6001"
+    strip_prefix: true
+    timeout: 5s
+
+  - path_prefix: "/service-c"
+    target: "http://service-c:6002"
     strip_prefix: true
     timeout: 5s
 ```

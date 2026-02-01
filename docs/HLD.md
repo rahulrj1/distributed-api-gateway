@@ -15,8 +15,10 @@ A production-grade API Gateway built with Go that provides:
 
 | Component | Technology |
 |-----------|------------|
-| Language | Go 1.21+ |
-| Router | chi or net/http |
+| API Gateway | Go 1.21+ |
+| Service A | Python (Flask) |
+| Service B | Java (Spring Boot) |
+| Service C | Node.js (Express) |
 | Rate Limit Store | Redis |
 | Metrics | Prometheus |
 | Tracing | OpenTelemetry |
@@ -53,24 +55,26 @@ A production-grade API Gateway built with Go that provides:
                                     │ • Circuit State│
                                     └────────────────┘
                                              │
-                      ┌──────────────────────┴──────────────────────┐
-                      │                                             │
-                      ▼                                             ▼
-             ┌────────────────┐                            ┌────────────────┐
-             │  Service A     │                            │  Service B     │
-             │    :6000       │                            │    :6001       │
-             └────────────────┘                            └────────────────┘
+             ┌───────────────────────────────┼───────────────────────────────┐
+             │                               │                               │
+             ▼                               ▼                               ▼
+    ┌────────────────┐             ┌────────────────┐             ┌────────────────┐
+    │  Service A     │             │  Service B     │             │  Service C     │
+    │  Python/Flask  │             │  Java/Spring   │             │  Node/Express  │
+    │    :6000       │             │    :6001       │             │    :6002       │
+    └────────────────┘             └────────────────┘             └────────────────┘
 ```
 
 **Components:**
 
-| Component | Port | Instances |
-|-----------|------|-----------|
-| API Gateway | 5000, 5001 | 2 |
-| Service A | 6000 | 1 |
-| Service B | 6001 | 1 |
-| Redis | 6379 | 1 |
-| Prometheus | 9090 | 1 |
+| Component | Technology | Port | Instances |
+|-----------|------------|------|-----------|
+| API Gateway | Go | 5000, 5001 | 2 |
+| Service A | Python/Flask | 6000 | 1 |
+| Service B | Java/Spring | 6001 | 1 |
+| Service C | Node/Express | 6002 | 1 |
+| Redis | - | 6379 | 1 |
+| Prometheus | - | 9090 | 1 |
 
 ---
 
@@ -89,12 +93,13 @@ Each stage can short-circuit and return immediately.
 
 ## 5. Routing
 
-| Path Prefix | Target | Strip Prefix |
-|-------------|--------|--------------|
-| `/service-a` | `http://service-a:6000` | Yes |
-| `/service-b` | `http://service-b:6001` | Yes |
+| Path Prefix | Target | Technology |
+|-------------|--------|------------|
+| `/service-a` | `http://service-a:6000` | Python/Flask |
+| `/service-b` | `http://service-b:6001` | Java/Spring |
+| `/service-c` | `http://service-c:6002` | Node/Express |
 
-Example: `GET /service-a/users` → Backend receives `GET /users`
+Prefix stripping enabled. Example: `GET /service-a/users` → Backend receives `GET /users`
 
 ---
 
@@ -226,10 +231,11 @@ All components run via Docker Compose:
 
 ```yaml
 services:
-  gateway-1:    # Port 5000
-  gateway-2:    # Port 5001  
-  service-a:    # Port 6000
-  service-b:    # Port 6001
+  gateway-1:    # Port 5000 (Go)
+  gateway-2:    # Port 5001 (Go)
+  service-a:    # Port 6000 (Python/Flask)
+  service-b:    # Port 6001 (Java/Spring)
+  service-c:    # Port 6002 (Node/Express)
   redis:        # Port 6379
   prometheus:   # Port 9090
 ```
