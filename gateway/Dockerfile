@@ -4,9 +4,9 @@ FROM golang:1.21-alpine AS builder
 WORKDIR /app
 
 # Copy go mod files
-COPY go.mod ./
+COPY go.mod go.sum ./
 
-# Download dependencies (none for now, but good practice)
+# Download dependencies
 RUN go mod download
 
 # Copy source code
@@ -26,11 +26,13 @@ RUN apk --no-cache add ca-certificates
 # Copy binary from builder
 COPY --from=builder /app/gateway .
 
+# Copy routes config
+COPY --from=builder /app/config/routes.yaml ./config/
+
 # Expose port (default gateway port per LLD)
 EXPOSE 5000
 
 # Set environment variables (per LLD specification)
-ENV SERVER_HOST=0.0.0.0
 ENV SERVER_PORT=5000
 
 # Run the gateway

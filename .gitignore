@@ -1,3 +1,6 @@
+# Go binaries
+gateway/gateway
+
 # Python
 __pycache__/
 *.py[cod]

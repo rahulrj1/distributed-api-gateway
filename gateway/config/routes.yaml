@@ -1,0 +1,15 @@
+routes:
+  - path_prefix: "/service-a"
+    target: "http://service-a:6000"
+    strip_prefix: true
+    timeout: 5s
+
+  - path_prefix: "/service-b"
+    target: "http://service-b:6001"
+    strip_prefix: true
+    timeout: 5s
+
+  - path_prefix: "/service-c"
+    target: "http://service-c:6002"
+    strip_prefix: true
+    timeout: 5s

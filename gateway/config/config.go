@@ -5,32 +5,28 @@ import (
 	"strconv"
 )
 
+// Default configuration values
+const (
+	DefaultPort           = 5000
+	DefaultRoutesPath     = "config/routes.yaml"
+	DefaultConnectTimeout = 1 // seconds - per HLD §9
+)
+
 // Config holds the gateway configuration
 type Config struct {
-	Host string
 	Port int
 }
 
 // Load reads configuration from environment variables with defaults
 func Load() *Config {
-	cfg := &Config{
-		Host: getEnv("SERVER_HOST", "0.0.0.0"),
-		Port: getEnvInt("SERVER_PORT", 5000),
+	return &Config{
+		Port: getEnvInt("SERVER_PORT", DefaultPort),
 	}
-	return cfg
 }
 
 // Address returns the full address string for the server
 func (c *Config) Address() string {
-	return c.Host + ":" + strconv.Itoa(c.Port)
-}
-
-// getEnv returns the value of an environment variable or a default value
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
+	return "0.0.0.0:" + strconv.Itoa(c.Port)
 }
 
 // getEnvInt returns the value of an environment variable as int or a default value
