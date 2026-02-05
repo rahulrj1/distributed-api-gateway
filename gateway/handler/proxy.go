@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/distributed-api-gateway/gateway/config"
+	"github.com/distributed-api-gateway/gateway/observability"
 	"github.com/distributed-api-gateway/gateway/pkg/circuitbreaker"
 	"github.com/distributed-api-gateway/gateway/pkg/redis"
 	"github.com/distributed-api-gateway/gateway/proxy"
@@ -44,8 +45,9 @@ func ProxyHandler(routes *config.RoutesConfig, forwarder *proxy.Forwarder, redis
 			breakers[service] = breaker
 		}
 
-		// Check circuit state
+		// Check circuit state and record metric
 		cbResult := breaker.Allow(r.Context())
+		updateCircuitBreakerMetric(service, cbResult.State)
 		if !cbResult.Allowed {
 			writeError(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "circuit breaker open")
 			return
@@ -83,4 +85,17 @@ func writeError(w http.ResponseWriter, r *http.Request, statusCode int, code, me
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func updateCircuitBreakerMetric(service string, state circuitbreaker.State) {
+	var value float64
+	switch state {
+	case circuitbreaker.StateClosed:
+		value = observability.CircuitClosed
+	case circuitbreaker.StateOpen:
+		value = observability.CircuitOpen
+	case circuitbreaker.StateHalfOpen:
+		value = observability.CircuitHalfOpen
+	}
+	observability.CircuitBreakerState.WithLabelValues(service).Set(value)
 }

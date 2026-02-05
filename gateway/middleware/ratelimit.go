@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/distributed-api-gateway/gateway/observability"
 	"github.com/distributed-api-gateway/gateway/pkg/ratelimit"
 )
 
@@ -21,6 +22,7 @@ func RateLimit(limiter *ratelimit.Limiter) func(http.Handler) http.Handler {
 
 			if !result.Allowed {
 				w.Header().Set("Retry-After", strconv.Itoa(result.RetryAfter))
+				observability.RateLimitRejections.WithLabelValues(key).Inc()
 				writeRateLimitError(w)
 				return
 			}
