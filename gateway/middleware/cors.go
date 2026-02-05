@@ -8,7 +8,7 @@ func CORS(next http.Handler) http.Handler {
 		// Allow requests from visualizer
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Trace-ID, X-Request-ID")
+		w.Header().Set("Access-Control-Allow-Headers", "*") // Allow all headers
 		w.Header().Set("Access-Control-Expose-Headers", "X-Trace-ID, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After")
 
 		// Handle preflight requests

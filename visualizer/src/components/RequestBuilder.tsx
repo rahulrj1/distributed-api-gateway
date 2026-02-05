@@ -6,60 +6,43 @@ interface RequestBuilderProps {
   isLoading: boolean;
 }
 
-const METHODS = ['GET', 'POST', 'PUT', 'DELETE'] as const;
 const EXAMPLE_PATHS = [
   '/service-a/hello',
   '/service-b/hello',
   '/service-c/hello',
-  '/service-a/api/data',
 ];
 
+const JWT_COMMAND = 'go run scripts/generate_jwt.go -sub user -client_id test -exp 1h';
+
 export function RequestBuilder({ onSend, isLoading }: RequestBuilderProps) {
-  const [method, setMethod] = useState<RequestConfig['method']>('GET');
   const [path, setPath] = useState('/service-a/hello');
   const [token, setToken] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [customHeaders, setCustomHeaders] = useState('');
-  const [body, setBody] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const copyCommand = () => {
+    navigator.clipboard.writeText(JWT_COMMAND);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const headers: Record<string, string> = {};
-    if (customHeaders.trim()) {
-      customHeaders.split('\n').forEach(line => {
-        const [key, ...valueParts] = line.split(':');
-        if (key && valueParts.length) {
-          headers[key.trim()] = valueParts.join(':').trim();
-        }
-      });
-    }
-
-    onSend({ method, path, headers, body: body || undefined }, token);
+    onSend({ method: 'GET', path, headers: {} }, token);
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-gray-800 rounded-lg p-6 space-y-4">
       <h2 className="text-xl font-semibold text-white mb-4">Request Builder</h2>
       
-      {/* Method & Path */}
-      <div className="flex gap-2">
-        <select
-          value={method}
-          onChange={(e) => setMethod(e.target.value as RequestConfig['method'])}
-          className="bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
-        >
-          {METHODS.map(m => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-        
+      {/* Path */}
+      <div>
+        <label className="block text-gray-400 text-sm mb-1">Endpoint</label>
         <input
           type="text"
           value={path}
           onChange={(e) => setPath(e.target.value)}
           placeholder="/service-a/hello"
-          className="flex-1 bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+          className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
         />
       </div>
 
@@ -84,55 +67,38 @@ export function RequestBuilder({ onSend, isLoading }: RequestBuilderProps) {
       {/* JWT Token */}
       <div>
         <label className="block text-gray-400 text-sm mb-1">JWT Token</label>
-        <textarea
+        <input
+          type="text"
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
-          rows={2}
           className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none font-mono text-sm"
         />
-        <p className="text-gray-500 text-xs mt-1">
-          Generate with: <code className="bg-gray-700 px-1 rounded">go run scripts/generate_jwt.go -sub user -client_id test -exp 1h</code>
-        </p>
-      </div>
-
-      {/* Advanced toggle */}
-      <button
-        type="button"
-        onClick={() => setShowAdvanced(!showAdvanced)}
-        className="text-blue-400 text-sm hover:text-blue-300"
-      >
-        {showAdvanced ? '▼ Hide Advanced' : '▶ Show Advanced'}
-      </button>
-
-      {/* Advanced options */}
-      {showAdvanced && (
-        <div className="space-y-3 pl-4 border-l-2 border-gray-700">
-          <div>
-            <label className="block text-gray-400 text-sm mb-1">Custom Headers (one per line)</label>
-            <textarea
-              value={customHeaders}
-              onChange={(e) => setCustomHeaders(e.target.value)}
-              placeholder="X-Custom-Header: value"
-              rows={2}
-              className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none font-mono text-sm"
-            />
+        <div className="mt-2 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-gray-400 text-xs font-medium">Generate JWT token:</span>
+            <button
+              type="button"
+              onClick={copyCommand}
+              className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-600"
+              title="Copy command"
+            >
+              {copied ? (
+                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              )}
+            </button>
           </div>
-          
-          {(method === 'POST' || method === 'PUT') && (
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">Request Body (JSON)</label>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder='{"key": "value"}'
-                rows={3}
-                className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none font-mono text-sm"
-              />
-            </div>
-          )}
+          <code className="text-gray-300 text-xs font-mono block overflow-x-auto">
+            {JWT_COMMAND}
+          </code>
         </div>
-      )}
+      </div>
 
       {/* Submit button */}
       <button
