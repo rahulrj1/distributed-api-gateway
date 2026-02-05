@@ -21,6 +21,12 @@ A high-performance API gateway built in Go for distributed deployments. Features
 | **Prometheus Metrics** | Request counts, latency, circuit breaker state |
 | **Pipeline Visualizer** | Real-time UI showing request flow through middleware |
 
+## Request Pipeline Visualizer
+
+![Request Pipeline Visualization](docs/images/pipeline-visualizer.png)
+
+Watch requests flow through the middleware chain in real-time, observing Authentication, Rate Limiting, Circuit Breaker, and Proxying steps as they happen.
+
 ## Quick Start
 
 ```bash
