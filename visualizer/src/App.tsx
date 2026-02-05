@@ -11,6 +11,15 @@ function generateTraceId(): string {
     .join('');
 }
 
+function tryFormatJson(str: string): string {
+  try {
+    const obj = JSON.parse(str);
+    return JSON.stringify(obj, null, 2);
+  } catch (e) {
+    return str;
+  }
+}
+
 export default function App() {
   const [gatewayUrl, setGatewayUrl] = useState('http://localhost:5000');
   const [isLoading, setIsLoading] = useState(false);
@@ -77,8 +86,18 @@ export default function App() {
                 onChange={(e) => setGatewayUrl(e.target.value)}
                 className="bg-gray-700 text-white px-3 py-1.5 rounded border border-gray-600 focus:border-blue-500 focus:outline-none text-sm w-48"
               />
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-500'}`} 
-                   title={isConnected ? 'WebSocket connected' : 'WebSocket disconnected'} />
+              <div className="flex items-center gap-2 px-2 py-1 rounded bg-gray-800 border border-gray-700">
+                <div className={`w-2 h-2 rounded-full ${
+                  error ? 'bg-red-500' : 
+                  isConnected ? 'bg-green-500' : 
+                  'bg-gray-500'
+                }`} />
+                <span className="text-xs font-medium text-gray-300">
+                  {error ? 'Error' : 
+                   isConnected ? 'Connected' : 
+                   'Ready'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -106,7 +125,7 @@ export default function App() {
                   </span>
                 </div>
                 <pre className="bg-gray-900 rounded p-4 overflow-x-auto text-sm font-mono text-gray-300 max-h-64 overflow-y-auto">
-                  {response.body || '(empty response)'}
+                  {tryFormatJson(response.body) || '(empty response)'}
                 </pre>
               </div>
             )}
