@@ -51,16 +51,16 @@ return {1, weighted_count + 1, 0}
 
 // Limiter implements sliding window rate limiting with Redis
 type Limiter struct {
-	redis *redis.Client
+	redis redis.Evaluator
 	limit int
 }
 
 // NewLimiter creates a rate limiter
-func NewLimiter(redis *redis.Client, limit int) *Limiter {
+func NewLimiter(r redis.Evaluator, limit int) *Limiter {
 	if limit <= 0 {
 		limit = DefaultLimit
 	}
-	return &Limiter{redis: redis, limit: limit}
+	return &Limiter{redis: r, limit: limit}
 }
 
 // Result of a rate limit check

@@ -124,13 +124,13 @@ return 1
 
 // Breaker implements circuit breaker pattern with Redis
 type Breaker struct {
-	redis   *redis.Client
+	redis   redis.Evaluator
 	service string
 }
 
 // NewBreaker creates a circuit breaker for a service
-func NewBreaker(redis *redis.Client, service string) *Breaker {
-	return &Breaker{redis: redis, service: service}
+func NewBreaker(r redis.Evaluator, service string) *Breaker {
+	return &Breaker{redis: r, service: service}
 }
 
 // Result of circuit breaker check

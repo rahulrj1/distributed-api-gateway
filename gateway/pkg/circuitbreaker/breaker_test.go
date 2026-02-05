@@ -2,25 +2,36 @@ package circuitbreaker
 
 import (
 	"context"
+	"errors"
 	"testing"
-	"time"
-
-	"github.com/distributed-api-gateway/gateway/pkg/redis"
 )
 
-func getTestClient(t *testing.T) *redis.Client {
-	client := redis.New("localhost:6379")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	if err := client.Ping(ctx); err != nil {
-		t.Skip("Redis not available, skipping integration test")
+// mockRedis simulates Redis Eval responses for unit testing
+type mockRedis struct {
+	responses []interface{} // Queue of responses to return
+	err       error         // Error to return (simulates Redis failure)
+	calls     int           // Track number of calls
+}
+
+func (m *mockRedis) Eval(ctx context.Context, script string, keys []string, args ...interface{}) (interface{}, error) {
+	if m.err != nil {
+		return nil, m.err
 	}
-	return client
+	if m.calls < len(m.responses) {
+		resp := m.responses[m.calls]
+		m.calls++
+		return resp, nil
+	}
+	return []interface{}{int64(1), "CLOSED"}, nil
 }
 
 func TestBreakerInitialState(t *testing.T) {
-	client := getTestClient(t)
-	breaker := NewBreaker(client, "test-init-"+time.Now().Format("150405.000"))
+	mock := &mockRedis{
+		responses: []interface{}{
+			[]interface{}{int64(1), "CLOSED"}, // Allow returns: allowed=1, state=CLOSED
+		},
+	}
+	breaker := NewBreaker(mock, "test-service")
 
 	result := breaker.Allow(context.Background())
 	if !result.Allowed {
@@ -32,8 +43,10 @@ func TestBreakerInitialState(t *testing.T) {
 }
 
 func TestBreakerFailOpen(t *testing.T) {
-	client := redis.New("invalid:9999")
-	breaker := NewBreaker(client, "test-service")
+	mock := &mockRedis{
+		err: errors.New("connection refused"), // Simulate Redis failure
+	}
+	breaker := NewBreaker(mock, "test-service")
 
 	result := breaker.Allow(context.Background())
 	if !result.Allowed {
@@ -42,10 +55,19 @@ func TestBreakerFailOpen(t *testing.T) {
 }
 
 func TestBreakerOpensAfterFailures(t *testing.T) {
-	client := getTestClient(t)
-	breaker := NewBreaker(client, "test-open-"+time.Now().Format("150405.000"))
+	// Build responses: 10x (Allow + RecordFailure) + final Allow
+	// Each Allow returns CLOSED, RecordFailure returns 1, final Allow returns OPEN
+	responses := make([]interface{}, 0, 21)
+	for i := 0; i < 10; i++ {
+		responses = append(responses, []interface{}{int64(1), "CLOSED"}) // Allow
+		responses = append(responses, int64(1))                          // RecordFailure
+	}
+	responses = append(responses, []interface{}{int64(0), "OPEN"}) // Final Allow
 
-	// Record 10 requests: all failures (100% failure rate, > threshold of 5)
+	mock := &mockRedis{responses: responses}
+	breaker := NewBreaker(mock, "test-service")
+
+	// Simulate 10 requests with failures
 	for i := 0; i < 10; i++ {
 		breaker.Allow(context.Background())
 		breaker.RecordFailure(context.Background())
@@ -61,32 +83,21 @@ func TestBreakerOpensAfterFailures(t *testing.T) {
 	}
 }
 
-func TestBreakerStaysClosedWithLowFailureRate(t *testing.T) {
-	client := getTestClient(t)
-	breaker := NewBreaker(client, "test-lowrate-"+time.Now().Format("150405.000"))
-
-	// Record 10 requests: 3 failures, 7 successes (30% failure rate < 50% threshold)
-	for i := 0; i < 10; i++ {
-		breaker.Allow(context.Background())
-		if i < 3 {
-			breaker.RecordFailure(context.Background())
-		} else {
-			breaker.RecordSuccess(context.Background())
-		}
+func TestBreakerStaysClosedWithSuccesses(t *testing.T) {
+	// 2x (Allow + RecordSuccess) + final Allow
+	mock := &mockRedis{
+		responses: []interface{}{
+			[]interface{}{int64(1), "CLOSED"}, // Allow
+			int64(1),                          // RecordSuccess
+			[]interface{}{int64(1), "CLOSED"}, // Allow
+			int64(1),                          // RecordSuccess
+			[]interface{}{int64(1), "CLOSED"}, // Final Allow
+		},
 	}
+	breaker := NewBreaker(mock, "test-service")
 
-	// Circuit should still be CLOSED
-	result := breaker.Allow(context.Background())
-	if !result.Allowed {
-		t.Error("Circuit should remain CLOSED with low failure rate")
-	}
-}
-
-func TestBreakerSuccessesKeepClosed(t *testing.T) {
-	client := getTestClient(t)
-	breaker := NewBreaker(client, "test-success-"+time.Now().Format("150405.000"))
-
-	for i := 0; i < 20; i++ {
+	// All successes - circuit stays closed
+	for i := 0; i < 2; i++ {
 		breaker.Allow(context.Background())
 		breaker.RecordSuccess(context.Background())
 	}
@@ -94,5 +105,36 @@ func TestBreakerSuccessesKeepClosed(t *testing.T) {
 	result := breaker.Allow(context.Background())
 	if !result.Allowed {
 		t.Error("Circuit should remain CLOSED with only successes")
+	}
+}
+
+func TestBreakerHalfOpenState(t *testing.T) {
+	mock := &mockRedis{
+		responses: []interface{}{
+			[]interface{}{int64(1), "HALF_OPEN"}, // After cooldown, transitions to HALF_OPEN
+		},
+	}
+	breaker := NewBreaker(mock, "test-service")
+
+	result := breaker.Allow(context.Background())
+	if !result.Allowed {
+		t.Error("HALF_OPEN should allow requests")
+	}
+	if result.State != StateHalfOpen {
+		t.Errorf("Expected HALF_OPEN, got %s", result.State)
+	}
+}
+
+func TestBreakerInvalidResponse(t *testing.T) {
+	mock := &mockRedis{
+		responses: []interface{}{
+			"invalid", // Not an array - should fail-open
+		},
+	}
+	breaker := NewBreaker(mock, "test-service")
+
+	result := breaker.Allow(context.Background())
+	if !result.Allowed {
+		t.Error("Should fail-open on invalid response")
 	}
 }

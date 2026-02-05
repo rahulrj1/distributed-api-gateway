@@ -7,10 +7,17 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Evaluator runs Lua scripts (interface for mocking in tests)
+type Evaluator interface {
+	Eval(ctx context.Context, script string, keys []string, args ...interface{}) (interface{}, error)
+}
+
 // Client wraps Redis operations needed by the gateway
 type Client struct {
 	rdb *redis.Client
 }
+
+var _ Evaluator = (*Client)(nil)
 
 // New creates a Redis client
 func New(addr string) *Client {

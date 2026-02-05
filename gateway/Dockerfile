@@ -20,7 +20,7 @@ FROM alpine:3.19
 
 WORKDIR /app
 
-# Add ca-certificates for HTTPS calls (future use)
+# Add ca-certificates for HTTPS calls
 RUN apk --no-cache add ca-certificates
 
 # Copy binary from builder
@@ -31,9 +31,6 @@ COPY --from=builder /app/config/routes.yaml ./config/
 
 # Expose port (default gateway port per LLD)
 EXPOSE 5000
-
-# Environment
-ENV SERVER_PORT=5000
 
 # Run the gateway
 CMD ["./gateway"]
