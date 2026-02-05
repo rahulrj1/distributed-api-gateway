@@ -19,7 +19,6 @@ A high-performance API gateway built in Go for distributed deployments. Features
 | **Rate Limiting** | Sliding window algorithm, shared via Redis |
 | **Circuit Breaker** | Protects backends from cascade failures |
 | **Prometheus Metrics** | Request counts, latency, circuit breaker state |
-| **Fail-Open Design** | Continues serving if Redis is unavailable |
 
 ## Quick Start
 
