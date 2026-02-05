@@ -44,11 +44,12 @@ func main() {
 	}
 	limiter := ratelimit.NewLimiter(redisClient, config.DefaultRateLimit)
 
-	// Create handlers and middleware chain: Auth → RateLimit → Proxy
+	// Create handlers and middleware chain: Auth → RateLimit → Proxy (with circuit breaker)
 	forwarder := proxy.NewForwarder()
-	proxyHandler := handler.ProxyHandler(routes, forwarder)
+	proxyHandler := handler.ProxyHandler(routes, forwarder, redisClient)
 	rateLimitMiddleware := middleware.RateLimit(limiter)
 	authMiddleware := middleware.Auth(validator)
+	log.Printf("Circuit breaker enabled")
 
 	// Create router
 	mux := http.NewServeMux()

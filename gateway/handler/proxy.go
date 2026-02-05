@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/distributed-api-gateway/gateway/config"
+	"github.com/distributed-api-gateway/gateway/pkg/circuitbreaker"
+	"github.com/distributed-api-gateway/gateway/pkg/redis"
 	"github.com/distributed-api-gateway/gateway/proxy"
 )
 
@@ -23,7 +25,9 @@ type ErrorDetail struct {
 }
 
 // ProxyHandler creates a handler for proxying requests to backend services
-func ProxyHandler(routes *config.RoutesConfig, forwarder *proxy.Forwarder) http.HandlerFunc {
+func ProxyHandler(routes *config.RoutesConfig, forwarder *proxy.Forwarder, redisClient *redis.Client) http.HandlerFunc {
+	breakers := make(map[string]*circuitbreaker.Breaker)
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Match route
 		route := routes.MatchRoute(r.URL.Path)
@@ -32,8 +36,24 @@ func ProxyHandler(routes *config.RoutesConfig, forwarder *proxy.Forwarder) http.
 			return
 		}
 
+		// Get or create circuit breaker for this service
+		service := route.PathPrefix // Use path prefix as service identifier
+		breaker, ok := breakers[service]
+		if !ok {
+			breaker = circuitbreaker.NewBreaker(redisClient, service)
+			breakers[service] = breaker
+		}
+
+		// Check circuit state
+		cbResult := breaker.Allow(r.Context())
+		if !cbResult.Allowed {
+			writeError(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "circuit breaker open")
+			return
+		}
+
 		// Forward request
 		if err := forwarder.Forward(w, r, route); err != nil {
+			breaker.RecordFailure(r.Context()) // Record failure for circuit breaker
 			if proxyErr, ok := err.(*proxy.ProxyError); ok {
 				code := "BAD_GATEWAY"
 				if proxyErr.Code == http.StatusGatewayTimeout {
@@ -44,7 +64,10 @@ func ProxyHandler(routes *config.RoutesConfig, forwarder *proxy.Forwarder) http.
 			}
 			log.Printf("Unexpected proxy error: %v", err)
 			writeError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal server error")
+			return
 		}
+
+		breaker.RecordSuccess(r.Context()) // Record success
 	}
 }
 
