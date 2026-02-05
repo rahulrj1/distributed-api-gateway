@@ -10,6 +10,7 @@ const (
 	DefaultPort           = 5000
 	DefaultRoutesPath     = "config/routes.yaml"
 	DefaultConnectTimeout = 1 // seconds - per HLD §9
+	DefaultPublicKeyPath  = "keys/public.pem"
 )
 
 // Config holds the gateway configuration

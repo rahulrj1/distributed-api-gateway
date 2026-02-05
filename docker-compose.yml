@@ -4,8 +4,8 @@ services:
     build: ./gateway
     ports:
       - "5000:5000"
-    environment:
-      - SERVER_PORT=5000
+    volumes:
+      - ./keys:/app/keys:ro
     depends_on:
       - service-a
       - service-b
@@ -21,8 +21,8 @@ services:
     build: ./gateway
     ports:
       - "5001:5000"
-    environment:
-      - SERVER_PORT=5000
+    volumes:
+      - ./keys:/app/keys:ro
     depends_on:
       - service-a
       - service-b

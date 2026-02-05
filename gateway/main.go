@@ -6,11 +6,12 @@ import (
 
 	"github.com/distributed-api-gateway/gateway/config"
 	"github.com/distributed-api-gateway/gateway/handler"
+	"github.com/distributed-api-gateway/gateway/middleware"
+	"github.com/distributed-api-gateway/gateway/pkg/jwt"
 	"github.com/distributed-api-gateway/gateway/proxy"
 )
 
 func main() {
-	// Load configuration
 	cfg := config.Load()
 
 	// Load routes
@@ -20,24 +21,27 @@ func main() {
 	}
 	log.Printf("Loaded %d routes", len(routes.Routes))
 
-	// Create forwarder
+	// Setup JWT validator
+	validator, err := jwt.NewValidator(config.DefaultPublicKeyPath, "")
+	if err != nil {
+		log.Fatalf("Failed to load JWT public key: %v", err)
+	}
+	log.Printf("JWT auth enabled")
+
+	// Create handlers
 	forwarder := proxy.NewForwarder()
+	proxyHandler := handler.ProxyHandler(routes, forwarder)
+	authMiddleware := middleware.Auth(validator)
 
 	// Create router
 	mux := http.NewServeMux()
-
-	// Register health endpoints (these don't go through proxy)
 	mux.HandleFunc("/health", handler.HealthHandler())
 	mux.HandleFunc("/metrics", handler.MetricsHandler())
-
-	// Register proxy handler for all other routes
-	mux.HandleFunc("/", handler.ProxyHandler(routes, forwarder))
+	mux.Handle("/", authMiddleware(proxyHandler))
 
 	// Start server
-	addr := cfg.Address()
-	log.Printf("Starting gateway server on %s", addr)
-
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	log.Printf("Starting gateway on %s", cfg.Address())
+	if err := http.ListenAndServe(cfg.Address(), mux); err != nil {
+		log.Fatalf("Server failed: %v", err)
 	}
 }

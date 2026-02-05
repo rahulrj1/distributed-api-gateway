@@ -32,7 +32,7 @@ COPY --from=builder /app/config/routes.yaml ./config/
 # Expose port (default gateway port per LLD)
 EXPOSE 5000
 
-# Set environment variables (per LLD specification)
+# Environment
 ENV SERVER_PORT=5000
 
 # Run the gateway
