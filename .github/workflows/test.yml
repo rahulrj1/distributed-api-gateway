@@ -111,7 +111,7 @@ jobs:
           openssl rsa -in keys/private.pem -pubout -out keys/public.pem
       
       - name: Start services
-        run: docker-compose up -d --build
+        run: docker compose up -d --build
       
       - name: Wait for services to be healthy
         run: |
@@ -126,8 +126,8 @@ jobs:
       
       - name: Show logs on failure
         if: failure()
-        run: docker-compose logs
+        run: docker compose logs
       
       - name: Cleanup
         if: always()
-        run: docker-compose down
+        run: docker compose down

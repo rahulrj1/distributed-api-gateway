@@ -29,7 +29,7 @@ openssl genrsa -out keys/private.pem 2048
 openssl rsa -in keys/private.pem -pubout -out keys/public.pem
 
 # Start everything
-docker-compose up -d
+docker compose up -d
 
 # Test it
 TOKEN=$(go run scripts/generate_jwt.go -sub testuser -client_id app -exp 1h)

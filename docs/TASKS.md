@@ -173,7 +173,7 @@ Test location: `gateway/tests/` and `scripts/e2e/`
 - prometheus (port 9090)
 
 **Acceptance Criteria**:
-- `docker-compose up` starts all services
+- `docker compose up` starts all services
 - Health checks pass
 - Requests through gateway reach backends
 

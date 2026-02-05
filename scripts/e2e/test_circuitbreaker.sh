@@ -53,7 +53,7 @@ echo "Test 2: Trigger circuit breaker..."
 # Ensure service is running first, then stop it
 docker start distributed-api-gateway-service-a-1 2>/dev/null || true
 sleep 2
-docker stop distributed-api-gateway-service-a-1 2>/dev/null || docker-compose stop service-a 2>/dev/null
+docker stop distributed-api-gateway-service-a-1 2>/dev/null || docker compose stop service-a 2>/dev/null
 sleep 3
 
 echo "Sending requests to trigger failures (need 5+ failures)..."
@@ -106,7 +106,7 @@ fi
 echo ""
 echo "Test 6: Recovery..."
 echo "Restarting service-a..."
-docker start distributed-api-gateway-service-a-1 2>/dev/null || docker-compose start service-a 2>/dev/null
+docker start distributed-api-gateway-service-a-1 2>/dev/null || docker compose start service-a 2>/dev/null
 
 echo "Waiting for service-a to be healthy..."
 for i in $(seq 1 10); do

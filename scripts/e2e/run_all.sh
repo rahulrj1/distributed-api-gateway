@@ -29,11 +29,11 @@ if [ ! -f "keys/private.pem" ]; then
     echo "Keys generated"
 fi
 
-# Check if docker-compose is running
+# Check if services are running
 echo "Checking services..."
 if ! docker ps | grep -q gateway-1; then
-    echo -e "${YELLOW}Services not running. Starting docker-compose...${NC}"
-    docker-compose up -d
+    echo -e "${YELLOW}Services not running. Starting docker compose...${NC}"
+    docker compose up -d
     echo "Waiting for services to be healthy..."
     sleep 15
 fi
