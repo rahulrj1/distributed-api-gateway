@@ -11,6 +11,8 @@ const (
 	DefaultRoutesPath     = "config/routes.yaml"
 	DefaultConnectTimeout = 1 // seconds - per HLD §9
 	DefaultPublicKeyPath  = "keys/public.pem"
+	DefaultRedisAddr      = "redis:6379"
+	DefaultRateLimit      = 100 // requests per minute
 )
 
 // Config holds the gateway configuration

@@ -8,16 +8,10 @@ import (
 )
 
 // Auth returns middleware that validates JWT tokens.
-// Skip auth for /health and /metrics. On success, adds X-User-ID and X-Client-ID headers.
+// On success, adds X-User-ID and X-Client-ID headers.
 func Auth(validator *jwt.Validator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Skip auth for health/metrics
-			if r.URL.Path == "/health" || r.URL.Path == "/metrics" {
-				next.ServeHTTP(w, r)
-				return
-			}
-
 			// Extract token from Authorization header
 			token := extractToken(r)
 			if token == "" {
