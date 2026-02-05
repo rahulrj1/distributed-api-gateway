@@ -12,6 +12,7 @@ import (
 	"github.com/distributed-api-gateway/gateway/pkg/jwt"
 	"github.com/distributed-api-gateway/gateway/pkg/ratelimit"
 	"github.com/distributed-api-gateway/gateway/pkg/redis"
+	"github.com/distributed-api-gateway/gateway/pkg/trace"
 	"github.com/distributed-api-gateway/gateway/proxy"
 )
 
@@ -44,23 +45,29 @@ func main() {
 	}
 	limiter := ratelimit.NewLimiter(redisClient, config.DefaultRateLimit)
 
-	// Create handlers and middleware chain: Metrics → Auth → RateLimit → Proxy
+	// Setup trace publisher for pipeline visualization
+	tracePublisher := trace.NewPublisher(redisClient.Raw())
+	log.Printf("Trace visualization enabled")
+
+	// Create handlers and middleware chain: Trace → Metrics → Auth → RateLimit → Proxy
 	forwarder := proxy.NewForwarder()
 	proxyHandler := handler.ProxyHandler(routes, forwarder, redisClient)
 	rateLimitMiddleware := middleware.RateLimit(limiter)
 	authMiddleware := middleware.Auth(validator)
 	metricsMiddleware := middleware.Metrics()
+	traceMiddleware := middleware.Trace(tracePublisher)
 	log.Printf("Circuit breaker enabled")
 
 	// Create router
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handler.HealthHandler())
 	mux.Handle("/metrics", handler.MetricsHandler())
-	mux.Handle("/", metricsMiddleware(authMiddleware(rateLimitMiddleware(proxyHandler))))
+	mux.HandleFunc("/ws/trace/", handler.TraceWebSocket(redisClient.Raw()))
+	mux.Handle("/", traceMiddleware(metricsMiddleware(authMiddleware(rateLimitMiddleware(proxyHandler)))))
 
-	// Start server
+	// Start server with CORS support for visualizer
 	log.Printf("Starting gateway on %s", cfg.Address())
-	if err := http.ListenAndServe(cfg.Address(), mux); err != nil {
+	if err := http.ListenAndServe(cfg.Address(), middleware.CORS(mux)); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

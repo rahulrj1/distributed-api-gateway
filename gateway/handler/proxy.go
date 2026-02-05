@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/distributed-api-gateway/gateway/config"
 	"github.com/distributed-api-gateway/gateway/observability"
 	"github.com/distributed-api-gateway/gateway/pkg/circuitbreaker"
 	"github.com/distributed-api-gateway/gateway/pkg/redis"
+	"github.com/distributed-api-gateway/gateway/pkg/trace"
 	"github.com/distributed-api-gateway/gateway/proxy"
 )
 
@@ -46,14 +48,25 @@ func ProxyHandler(routes *config.RoutesConfig, forwarder *proxy.Forwarder, redis
 		}
 
 		// Check circuit state and record metric
+		cbStart := time.Now()
 		cbResult := breaker.Allow(r.Context())
 		updateCircuitBreakerMetric(service, cbResult.State)
 		if !cbResult.Allowed {
+			trace.EmitStep(r.Context(), trace.StepCircuit, trace.StatusFailed, time.Since(cbStart), map[string]interface{}{
+				"service": service,
+				"state":   string(cbResult.State),
+				"reason":  "circuit open",
+			})
 			writeError(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "circuit breaker open")
 			return
 		}
+		trace.EmitStep(r.Context(), trace.StepCircuit, trace.StatusSuccess, time.Since(cbStart), map[string]interface{}{
+			"service": service,
+			"state":   string(cbResult.State),
+		})
 
 		// Forward request
+		fwdStart := time.Now()
 		if err := forwarder.Forward(w, r, route); err != nil {
 			breaker.RecordFailure(r.Context()) // Record failure for circuit breaker
 			if proxyErr, ok := err.(*proxy.ProxyError); ok {
@@ -61,13 +74,31 @@ func ProxyHandler(routes *config.RoutesConfig, forwarder *proxy.Forwarder, redis
 				if proxyErr.Code == http.StatusGatewayTimeout {
 					code = "GATEWAY_TIMEOUT"
 				}
+				trace.EmitStep(r.Context(), trace.StepForward, trace.StatusFailed, time.Since(fwdStart), map[string]interface{}{
+					"service":     service,
+					"target":      route.Target,
+					"error":       proxyErr.Message,
+					"status_code": proxyErr.Code,
+				})
 				writeError(w, r, proxyErr.Code, code, proxyErr.Message)
 				return
 			}
 			log.Printf("Unexpected proxy error: %v", err)
+			trace.EmitStep(r.Context(), trace.StepForward, trace.StatusFailed, time.Since(fwdStart), map[string]interface{}{
+				"service": service,
+				"error":   "internal error",
+			})
 			writeError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal server error")
 			return
 		}
+
+		trace.EmitStep(r.Context(), trace.StepForward, trace.StatusSuccess, time.Since(fwdStart), map[string]interface{}{
+			"service": service,
+			"target":  route.Target,
+		})
+
+		// Emit complete event
+		trace.EmitStep(r.Context(), trace.StepComplete, trace.StatusSuccess, 0, nil)
 
 		breaker.RecordSuccess(r.Context()) // Record success
 	}

@@ -1,15 +1,16 @@
 # Future Enhancements
 
-## 1. Request Pipeline Visualizer (Frontend)
+## ✅ 1. Request Pipeline Visualizer (Frontend) - DONE
 
 A real-time visualization of requests flowing through the gateway middleware chain.
 
-**Features:**
+**Implemented:**
 - Request builder UI (method, path, headers, body)
 - Visual pipeline showing: Request → Auth → RateLimit → Circuit → Backend
 - Real-time step updates via WebSocket
 - Latency breakdown per step
 - Failure visualization with details
+- Framer Motion animations
 
 **Tech Stack:**
 - React + TypeScript + Tailwind CSS
@@ -17,10 +18,13 @@ A real-time visualization of requests flowing through the gateway middleware cha
 - WebSocket for real-time updates
 - Redis Pub/Sub for trace events
 
-**Backend Changes Needed:**
-- `GET /ws/trace/{traceId}` - WebSocket endpoint
-- Emit trace events at each middleware step
-- Redis Pub/Sub for trace propagation
+**Files Added:**
+- `visualizer/` - React frontend
+- `gateway/pkg/trace/` - Trace event types and publisher
+- `gateway/middleware/trace.go` - Trace middleware
+- `gateway/handler/websocket.go` - WebSocket endpoint
+
+**Run:** `docker compose up -d` then visit http://localhost:3000
 
 ---
 

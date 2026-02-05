@@ -3,8 +3,10 @@ package middleware
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/distributed-api-gateway/gateway/pkg/jwt"
+	"github.com/distributed-api-gateway/gateway/pkg/trace"
 )
 
 // Auth returns middleware that validates JWT tokens.
@@ -12,9 +14,14 @@ import (
 func Auth(validator *jwt.Validator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+
 			// Extract token from Authorization header
 			token := extractToken(r)
 			if token == "" {
+				trace.EmitStep(r.Context(), trace.StepAuth, trace.StatusFailed, time.Since(start), map[string]interface{}{
+					"error": "missing authorization token",
+				})
 				writeAuthError(w, "missing authorization token")
 				return
 			}
@@ -22,9 +29,18 @@ func Auth(validator *jwt.Validator) func(http.Handler) http.Handler {
 			// Validate token
 			claims, err := validator.Validate(token)
 			if err != nil {
+				trace.EmitStep(r.Context(), trace.StepAuth, trace.StatusFailed, time.Since(start), map[string]interface{}{
+					"error": err.Error(),
+				})
 				writeAuthError(w, err.Error())
 				return
 			}
+
+			// Emit success trace
+			trace.EmitStep(r.Context(), trace.StepAuth, trace.StatusSuccess, time.Since(start), map[string]interface{}{
+				"user_id":   claims.Sub,
+				"client_id": claims.ClientID,
+			})
 
 			// Add user info to request headers for downstream
 			r.Header.Set("X-User-ID", claims.Sub)

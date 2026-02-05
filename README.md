@@ -19,6 +19,7 @@ A high-performance API gateway built in Go for distributed deployments. Features
 | **Rate Limiting** | Sliding window algorithm, shared via Redis |
 | **Circuit Breaker** | Protects backends from cascade failures |
 | **Prometheus Metrics** | Request counts, latency, circuit breaker state |
+| **Pipeline Visualizer** | Real-time UI showing request flow through middleware |
 
 ## Quick Start
 
@@ -34,6 +35,9 @@ docker compose up -d
 # Test it
 TOKEN=$(go run scripts/generate_jwt.go -sub testuser -client_id app -exp 1h)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/service-a/hello
+
+# Open Pipeline Visualizer
+open http://localhost:3000
 ```
 
 ## Testing

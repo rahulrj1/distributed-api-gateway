@@ -39,7 +39,7 @@ SUCCESS_COUNT=0
 for i in $(seq 1 5); do
     STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$GATEWAY_1/service-a/hello")
     if [ "$STATUS" = "200" ]; then
-        ((SUCCESS_COUNT++))
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
     fi
 done
 if [ "$SUCCESS_COUNT" -eq 5 ]; then
@@ -60,13 +60,13 @@ G2_BLOCKED=0
 # Send 60 requests to gateway-1
 for i in $(seq 1 60); do
     STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$GATEWAY_1/service-a/hello")
-    if [ "$STATUS" = "200" ]; then ((G1_SUCCESS++)); elif [ "$STATUS" = "429" ]; then ((G1_BLOCKED++)); fi
+    if [ "$STATUS" = "200" ]; then G1_SUCCESS=$((G1_SUCCESS + 1)); elif [ "$STATUS" = "429" ]; then G1_BLOCKED=$((G1_BLOCKED + 1)); fi
 done
 
 # Send 60 requests to gateway-2 (should share rate limit counter via Redis)
 for i in $(seq 1 60); do
     STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$GATEWAY_2/service-a/hello")
-    if [ "$STATUS" = "200" ]; then ((G2_SUCCESS++)); elif [ "$STATUS" = "429" ]; then ((G2_BLOCKED++)); fi
+    if [ "$STATUS" = "200" ]; then G2_SUCCESS=$((G2_SUCCESS + 1)); elif [ "$STATUS" = "429" ]; then G2_BLOCKED=$((G2_BLOCKED + 1)); fi
 done
 
 TOTAL_SUCCESS=$((G1_SUCCESS + G2_SUCCESS))

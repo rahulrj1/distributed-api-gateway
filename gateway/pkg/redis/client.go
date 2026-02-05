@@ -45,3 +45,8 @@ func (c *Client) Eval(ctx context.Context, script string, keys []string, args ..
 func (c *Client) Close() error {
 	return c.rdb.Close()
 }
+
+// Raw returns the underlying go-redis client for advanced operations (Pub/Sub, etc.)
+func (c *Client) Raw() *redis.Client {
+	return c.rdb
+}
